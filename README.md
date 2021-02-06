@@ -1,2 +1,2 @@
 # Mill-Map
-A PIL based procedural map generator. 
+A pillow based procedural map generator. 
