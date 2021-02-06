@@ -1,2 +1,2 @@
 # Millow.
-A pillow based procedural map generator. 
+A Python procedural map generator. 
