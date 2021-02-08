@@ -19,9 +19,9 @@ img.show() #Shows the generated map, one can use any pillow image methods on img
 ```
 
 Currently there are the following map types:
--'continents'
--'dense islands'
--'sparse islands'
+- 'continents'
+- 'dense islands'
+- 'sparse islands'
 
 # Examples.
 
