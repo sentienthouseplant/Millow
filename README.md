@@ -33,7 +33,7 @@ map.toImage().show()
 ```
 ## Output.
 
-! (https://github.com/Jackbytes/Millow-Map/blob/main/img/continents.png "Continents")
+![continents](https://github.com/Jackbytes/Millow-Map/blob/main/img/continents.png "Continents")
 
 
 
