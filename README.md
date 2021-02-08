@@ -25,7 +25,7 @@ Currently there are the following map types:
 
 # Examples.
 
-##Input.
+## Input.
 ```python
 map = Millow.Millow('continents')
 map.toImage().show()
@@ -36,7 +36,7 @@ map.toImage().show()
 map = Millow.Millow('sparse islands')
 map.toImage().show()
 ```
-##Output.
+## Output.
 
 
 
