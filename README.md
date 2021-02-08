@@ -33,7 +33,13 @@ map.toImage().show()
 ```
 ## Output.
 
+### Continents.
 ![continents](https://github.com/Jackbytes/Millow-Map/blob/main/img/continents.png "Continents")
 
+### Dense Islands.
+![Dense Islands](https://github.com/Jackbytes/Millow-Map/blob/main/img/denseislands.png "Dense Islands")
+
+### Sparse Islands.
+![Sparse Islands](https://github.com/Jackbytes/Millow-Map/blob/main/img/sparseislands.png "Sparse Islands")
 
 
