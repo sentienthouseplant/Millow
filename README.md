@@ -1,10 +1,10 @@
 # Millow Map. (0.1.0)
 A Python procedural map generator. 
 
-#Features
+# Features
 The program accepts a specified map type (Continents, Dense Islands, etc) and generates a basic 1080x1920 rgb pillow Image object
 
-#How-To
+# How-To
 Currently there are 3 types of map:
 -Continents.
 -Dense Islands.
@@ -18,6 +18,6 @@ img = map.toImage() #Produces a pillow image object.
 img.show() #Shows the generated map, one can use any pillow image methods on img. 
 ```
 
-#Examples.
+# Examples.
 
 
