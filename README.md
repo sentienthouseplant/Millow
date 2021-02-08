@@ -18,6 +18,25 @@ img = map.toImage() #Produces a pillow image object.
 img.show() #Shows the generated map, one can use any pillow image methods on img. 
 ```
 
+Currently there are the following map types:
+-'continents'
+-'dense islands'
+-'sparse islands'
+
 # Examples.
+
+##Input.
+```python
+map = Millow.Millow('continents')
+map.toImage().show()
+
+map = Millow.Millow('dense islands')
+map.toImage().show()
+
+map = Millow.Millow('sparse islands')
+map.toImage().show()
+```
+##Output.
+
 
 
