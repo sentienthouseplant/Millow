@@ -4,10 +4,10 @@
 
 from PIL import Image
 import numpy as np
-from scipy.ndimage import zoom
+from scipy.ndimage import zoom, gaussian_filter
 
 #Constants used--------------------------------------------
-p_c = 0.59274621
+CRIT_PROB = 0.59274621
 
 #The functions---------------------------------------------
 
@@ -15,15 +15,14 @@ p_c = 0.59274621
 #At a special occupation probability we get holes of all sizes (fractals). This would be a good candidate
 #for an initial noise array to used for the map.
 def noiseArray(sizeTuple):
-    prob = p_c
+    prob = CRIT_PROB
     ar = np.random.choice([0, 1], p=[1 - prob, prob], size=sizeTuple)
     return ar
-
 #This function will smooth the resulting noise from the noiseArray. This essentially yields a map with some
 #basic landmasses. This is based on the cave generating cellular automata seen in many games.
 def cellularSmooth(ar:np.array, overPop: int, underPop: int, bornPop: int, steps:int, borderValue=1) -> np.array:
 
-    """Smooths out a noisey array."""
+    """Smooths out a noisey array to produce geographical features."""
 
     ar = np.pad(ar,1,constant_values = borderValue) # Pads the array so we don't have to have special logic for edges.
     height, width = ar.shape #Gets the width and height of the padded array.
@@ -86,13 +85,14 @@ def heightArray(size : (int, int),volat : float, noiseProb : float):
     heightArray[1,0] = rng.uniform(low=-1,high=1)
 
     for x0 in range(2,size[1]): #Iterates over the first row, initialising it.
-        if rng.uniform() < noiseProb:
+        if rng.uniform() < noiseProb: #This is the chance that some independent randomness is introduced.
             heightArray[0, x0] = rng.uniform(low=-1,high=1)
         else:
             uni = rng.uniform(low=-1,high=1)
             point1 = heightArray[0,x0-2] #The value 2 places back in the first row.
             point2 = heightArray[0,x0-1] #The value 1 place back in the first row.
-            heightArray[0,x0] = ((point1+point2)/2) + volat*uni #Calulates the midpoint and adds a weighted U[0,1].
+            heightArray[0,x0] = ((point1+point2)/2) + volat*uni #Calulates the midpoint and adds a weighted U[-1,1].
+            # This should add some dependence that results in sequences of similar values.
 
     for y0 in range(2,size[0]): #See above for loop. This repeats the above but for the first column.
         if rng.uniform() < noiseProb:
@@ -103,7 +103,7 @@ def heightArray(size : (int, int),volat : float, noiseProb : float):
             point2 = heightArray[y0-1,0]
             heightArray[y0,0] = ((point1+point2)/2) + volat*uni
 
-    for y in range(1,size[0]):
+    for y in range(1,size[0]): #
         for x in range(1,size[1]):
             if rng.uniform() < noiseProb:
                 heightArray[y, x] = rng.uniform(low=-1,high=1)
@@ -113,6 +113,7 @@ def heightArray(size : (int, int),volat : float, noiseProb : float):
                 point2 = heightArray[y, x-1]
                 heightArray[y, x] = ((point1 + point2) / 2) + volat * uni
 
+    heightArray = gaussian_filter(heightArray,0.7)
 
     return heightArray
 
@@ -137,7 +138,6 @@ class Millow():
 
         self.generated = False #Used to see if a map has been generated.
 
-
     def generateRawMap(self):
 
         """Generates a basic array with land and water."""
@@ -159,6 +159,20 @@ class Millow():
         self.rawMap = rawMap #Saves the generated smooth map.
 
         self.generated = True #Used to see if the basic map has been generated.
+
+    def addHeight(self):
+
+        """Adds height levels to the rawMap property."""
+
+        rawHeight = heightArray(self.size, 20,0.002)
+
+        rawHeight = gaussian_filter(rawHeight,2)
+
+        rawHeight[self.rawMap == 0] = 0
+
+        rawHeight= rawHeight[0:1080, 0:1920]
+
+        self.rawHeight = rawHeight
 
     def toImage(self):
 
