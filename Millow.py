@@ -2,13 +2,16 @@
 #
 # - Produce a png of a map with various properties stipulated by the user.
 
+#TODO Add 'coastal smoothing' to height map.
+#TODO Add color stratification to heights (Deep grren, lighter green, yellow, gray, white).
+
 from PIL import Image
 import numpy as np
 from scipy.ndimage import zoom, gaussian_filter
 
 #Constants used--------------------------------------------
 CRIT_PROB = 0.59274621
-
+DEBUG = False
 #The functions---------------------------------------------
 
 #This function produces a example of percolation. Please see the wikipedia article for more infomation.
@@ -113,8 +116,6 @@ def heightArray(size : (int, int),volat : float, noiseProb : float):
                 point2 = heightArray[y, x-1]
                 heightArray[y, x] = ((point1 + point2) / 2) + volat * uni
 
-    heightArray = gaussian_filter(heightArray,0.7)
-
     return heightArray
 
 class Millow():
@@ -128,15 +129,15 @@ class Millow():
             raise Exception('The map type must be one of the possible options.') # Raises an exception if the user
             #attempts to give a invalid choice of map type.
 
-        self.size = (1080, 1920) #The pixel size of the final image, currently not variable.
+        self.size = (1080, 1920) #The pixel size of the final image, currently not variable. Will be in future versions.
 
-        self.mapType = mapType
+        self.mapType = mapType #Sets the map type. Currently unused.
 
-        self.mapTypeDict = {'continents': (9,4,6,10,1), 'dense islands': (7,3,9,10,0), 'sparse islands' :(9,2,6,15,1)}
+        self.mapTypeDict = {'continents': (9,4,6,10,1), 'dense islands': (7,1,9,15,0), 'sparse islands' :(9,2,6,18,1)}
         #A dictionary which maps the users selected map type to the inputs of cellularSmooth. Inputs discovered by
         #experimentation.
 
-        self.generated = False #Used to see if a map has been generated.
+        self.rawsGenerated = False #Used to see if a map has been generated.
 
     def generateRawMap(self):
 
@@ -158,48 +159,73 @@ class Millow():
 
         self.rawMap = rawMap #Saves the generated smooth map.
 
-        self.generated = True #Used to see if the basic map has been generated.
-
-    def addHeight(self):
+    def generateHeight(self):
 
         """Adds height levels to the rawMap property."""
 
-        rawHeight = heightArray(self.size, 20,0.002)
+        alphaArray = noiseArray( (int(self.size[0]/10), int(self.size[1]/10) ) ) #Size is divided by 50 since it will be zoomed by this
+        #amount to create smooth features. This uses percolation at the critical probability for features of all sizes.
 
-        rawHeight = gaussian_filter(rawHeight,2)
+        alphaArray = cellularSmooth(alphaArray, 9,2,6,15, borderValue=0) #Dense islands.
 
-        rawHeight[self.rawMap == 0] = 0
+        alphaArray = zoom(alphaArray, 10) #Zooming the array restores it to the intended pixel dimensions and smooths out
+        #the roughness.
 
-        rawHeight= rawHeight[0:1080, 0:1920]
+        alphaArray = alphaArray[0:1080, 0:1920] #Trims any extra entries possibly caused by rounding.
 
-        self.rawHeight = rawHeight
+        alphaArray = alphaArray.astype(np.float32) #Changes the datatype so that Gaussian blur and divison work with the
+        #desired accuracy.
+
+        alphaArray = gaussian_filter(alphaArray, 20)  #Blurs the image significantly.
+
+        alphaArray[self.rawMap == 0] = 0 #This masks the height array, so only value which correspond to '1's in the
+        #rawMap are kept. The rest are set to zero. Thus zero is 'sea level'.
+
+        alphaArray = ((alphaArray - np.amin(alphaArray))/np.amax(alphaArray))*255 #All values will be in the range (0,255).
+
+        rawHeight = np.full((1080,1920,4),[255,255,255,0],dtype=np.uint8) #Produces a black RGBA array with zero opacity.
+
+        rawHeight[:,:,3] = alphaArray #Sets the opaticy of the rawHeight array to the one we generated.
+
+        self.rawHeight = rawHeight #Saves The Height Array.
+
+        if DEBUG:
+
+            img = Image.fromarray(rawHeight)
+
+            img.show()
+
+    def generateRaws(self):
+
+        "Generates the arrays needed for creating the final image."
+
+        self.generateRawMap()
+        self.generateHeight()
+
+        self.rawsGenerated = True
 
     def toImage(self):
 
         """Returns a colour pillow image object corresponding to the map."""
 
-        if not self.generated:
+        if not self.rawsGenerated: #Checks if the raw map array has been generated.
 
-            self.generateRawMap()
+            self.generateRaws()
 
-        colourMap = np.zeros([self.size[0], self.size[1], 3], dtype=np.uint8) #Initialises the rgb array.
+        colourMap = np.zeros([self.size[0], self.size[1], 4], dtype=np.uint8) #Initialises the RGBA array.
 
-        arrayIt = np.nditer(self.rawMap, flags=['multi_index']) #Allows iterating over the array and getting indices.
+        colourMap[self.rawMap == 0] = [79,76,176,255] #Colours the 'water'.
 
-        #The next loop is very intensive. Will be changed to a more efficient method once i've found one.
+        colourMap[self.rawMap == 1] = [159,193,100,255] #Colours the 'earth'.
 
-        for item in arrayIt:
+        baseImg = Image.fromarray(colourMap)
 
-            (x,y) = arrayIt.multi_index
+        heightImg = Image.fromarray(self.rawHeight)
 
-            if item==0:
+        resultImg = Image.alpha_composite(baseImg,heightImg)
 
-                colourMap[x,y] = [79,76,176]
+        return resultImg
 
-            if item==1:
+map = Millow('sparse islands')
 
-                colourMap[x,y] = [159,193,100]
-
-        img = Image.fromarray(colourMap)
-
-        return img
+map.toImage().show()
