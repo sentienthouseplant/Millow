@@ -22,13 +22,13 @@ Currently there are the following map types:
 
 ## Input.
 ```python
-map = Millow.Millow('continents')
+map = Millow('continents')
 map.toImage().show()
 
-map = Millow.Millow('dense islands')
+map = Millow('dense islands')
 map.toImage().show()
 
-map = Millow.Millow('sparse islands')
+map = Millow('sparse islands')
 map.toImage().show()
 ```
 ## Output.
