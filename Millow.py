@@ -1,8 +1,6 @@
 # Outcomes of project.
 #
 # - Produce a png of a map with various properties stipulated by the user.
-
-#TODO Add 'coastal smoothing' to height map.
 #TODO Add color stratification to heights (Deep grren, lighter green, yellow, gray, white).
 
 from PIL import Image
@@ -11,7 +9,6 @@ from scipy.ndimage import zoom, gaussian_filter
 
 #Constants used--------------------------------------------
 CRIT_PROB = 0.59274621
-DEBUG = False
 #The functions---------------------------------------------
 
 #This function produces a example of percolation. Please see the wikipedia article for more infomation.
@@ -176,7 +173,10 @@ class Millow():
         alphaArray = alphaArray.astype(np.float32) #Changes the datatype so that Gaussian blur and divison work with the
         #desired accuracy.
 
-        alphaArray = gaussian_filter(alphaArray, 20)  #Blurs the image significantly.
+        alphaArray[self.rawMap == 0] = 0 #This masks the height array, so only value which correspond to '1's in the
+        #rawMap are kept. The rest are set to zero. Thus zero is 'sea level'.
+
+        alphaArray = gaussian_filter(alphaArray, 20)  # Blurs the image significantly.
 
         alphaArray[self.rawMap == 0] = 0 #This masks the height array, so only value which correspond to '1's in the
         #rawMap are kept. The rest are set to zero. Thus zero is 'sea level'.
@@ -188,12 +188,6 @@ class Millow():
         rawHeight[:,:,3] = alphaArray #Sets the opaticy of the rawHeight array to the one we generated.
 
         self.rawHeight = rawHeight #Saves The Height Array.
-
-        if DEBUG:
-
-            img = Image.fromarray(rawHeight)
-
-            img.show()
 
     def generateRaws(self):
 
@@ -226,6 +220,6 @@ class Millow():
 
         return resultImg
 
-map = Millow('sparse islands')
-
-map.toImage().show()
+# map = Millow('sparse islands')
+#
+# map.toImage().show()
