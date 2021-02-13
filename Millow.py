@@ -1,7 +1,7 @@
 # Outcomes of project.
 #
 # - Produce a png of a map with various properties stipulated by the user.
-#TODO Add color stratification to heights (Deep grren, lighter green, yellow, gray, white).
+# ((159,193,100), (252, 234, 116), (230, 228, 220), (255, 255, 255))
 
 from PIL import Image
 import numpy as np
@@ -115,6 +115,46 @@ def heightArray(size : (int, int),volat : float, noiseProb : float):
 
     return heightArray
 
+def colorStrat(alphaArray : np.array, ranges: list, colors: list) -> np.array:
+
+    """Produces a rgba array with colors stratified according to the ranges given."""
+
+    if not (len(colors) == len(ranges)):
+
+        raise Exception('Each color in colors list must have a corresponding range.')
+
+    rArray = gArray = bArray = alphaArray
+
+    rValues = [i[0] for i in colors]
+
+    gValues = [i[1] for i in colors]
+
+    bValues = [i[2] for i in colors]
+
+    (a,b) = alphaArray.shape #Unpacks size of a, a two dimensional array.
+
+    resultArray = np.full((a,b,4),[255,255,255,0],dtype=np.uint8) #Creates a rgba array.
+
+    counter = 0
+
+    for low in ranges:
+
+        rArray[(low <= a)] = rValues[counter]
+        gArray[(low <= a)] = gValues[counter]
+        bArray[(low <= a)] = bValues[counter]
+
+        counter = counter + 1
+
+    resultArray[:,:,0] = rArray
+    resultArray[:,:,1] = gArray
+    resultArray[:,:,2] = bArray
+    resultArray[:,:,3] = alphaArray
+
+    img = Image.fromarray(resultArray)
+    img.show()
+
+    return resultArray
+
 class Millow():
 
     def __init__(self, mapType: str):
@@ -160,12 +200,12 @@ class Millow():
 
         """Adds height levels to the rawMap property."""
 
-        alphaArray = noiseArray( (int(self.size[0]/10), int(self.size[1]/10) ) ) #Size is divided by 50 since it will be zoomed by this
+        alphaArray = noiseArray( (int(self.size[0]/5), int(self.size[1]/5) ) ) #Size is divided by 50 since it will be zoomed by this
         #amount to create smooth features. This uses percolation at the critical probability for features of all sizes.
 
-        alphaArray = cellularSmooth(alphaArray, 9,2,6,15, borderValue=0) #Dense islands.
+        alphaArray = cellularSmooth(alphaArray, 9,2,6,17, borderValue=0) #Dense islands.
 
-        alphaArray = zoom(alphaArray, 10) #Zooming the array restores it to the intended pixel dimensions and smooths out
+        alphaArray = zoom(alphaArray, 5) #Zooming the array restores it to the intended pixel dimensions and smooths out
         #the roughness.
 
         alphaArray = alphaArray[0:1080, 0:1920] #Trims any extra entries possibly caused by rounding.
@@ -176,18 +216,30 @@ class Millow():
         alphaArray[self.rawMap == 0] = 0 #This masks the height array, so only value which correspond to '1's in the
         #rawMap are kept. The rest are set to zero. Thus zero is 'sea level'.
 
-        alphaArray = gaussian_filter(alphaArray, 20)  # Blurs the image significantly.
+        alphaArray = gaussian_filter(alphaArray, 17)  # Blurs the image significantly.
 
-        alphaArray[self.rawMap == 0] = 0 #This masks the height array, so only value which correspond to '1's in the
-        #rawMap are kept. The rest are set to zero. Thus zero is 'sea level'.
+        alphaArray[self.rawMap == 0] = 0 #Remasks the array, now there is some coastal smoothing.
 
         alphaArray = ((alphaArray - np.amin(alphaArray))/np.amax(alphaArray))*255 #All values will be in the range (0,255).
+
+        alphaArray = alphaArray.astype(np.uint8)
+
+        #Gradient Heights
+
+        rArray = np.interp(alphaArray,[0,200,255],[159,252,245])
+        #
+        gArray = np.interp(alphaArray,[0,200,255],[193,234,245])
+        #
+        bArray = np.interp(alphaArray, [0, 200, 255], [100, 116, 205])
 
         rawHeight = np.full((1080,1920,4),[255,255,255,0],dtype=np.uint8) #Produces a black RGBA array with zero opacity.
 
         rawHeight[:,:,3] = alphaArray #Sets the opaticy of the rawHeight array to the one we generated.
+        rawHeight[:,:,0] = rArray
+        rawHeight[:, :,1] = gArray
+        rawHeight[:, :,2] = bArray
 
-        self.rawHeight = rawHeight #Saves The Height Array.
+        self.rawHeight = rawHeight
 
     def generateRaws(self):
 
@@ -219,7 +271,3 @@ class Millow():
         resultImg = Image.alpha_composite(baseImg,heightImg)
 
         return resultImg
-
-# map = Millow('sparse islands')
-#
-# map.toImage().show()
