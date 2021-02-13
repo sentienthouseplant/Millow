@@ -226,18 +226,18 @@ class Millow():
 
         #Gradient Heights
 
-        rArray = np.interp(alphaArray,[0,200,255],[159,252,245])
+        rArray = np.interp(alphaArray,[0,200,255],[159,252,253])
         #
-        gArray = np.interp(alphaArray,[0,200,255],[193,234,245])
+        gArray = np.interp(alphaArray,[0,200,255],[193,234,250])
         #
-        bArray = np.interp(alphaArray, [0, 200, 255], [100, 116, 205])
+        bArray = np.interp(alphaArray, [0, 200, 255], [100, 116, 212])
 
         rawHeight = np.full((1080,1920,4),[255,255,255,0],dtype=np.uint8) #Produces a black RGBA array with zero opacity.
 
         rawHeight[:,:,3] = alphaArray #Sets the opaticy of the rawHeight array to the one we generated.
         rawHeight[:,:,0] = rArray
-        rawHeight[:, :,1] = gArray
-        rawHeight[:, :,2] = bArray
+        rawHeight[:,:,1] = gArray
+        rawHeight[:,:,2] = bArray
 
         self.rawHeight = rawHeight
 
