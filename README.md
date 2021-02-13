@@ -48,4 +48,7 @@ map.toImage().show()
 ### Sparse Islands.
 ![Sparse Islands](https://github.com/Jackbytes/Millow-Map/blob/main/img/sparseislands.png "Sparse Islands")
 
+# To-Do.
 
+[ ] Add water shading.
+[ ] Add option for discrete gradients.
