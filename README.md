@@ -18,7 +18,7 @@ Currently there are the following map types:
 - 'dense islands'
 - 'sparse islands'
 
-#Requirements 
+# Requirements 
 
 - scipy
 - pillow
