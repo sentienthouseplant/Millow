@@ -2,7 +2,7 @@
 A Python procedural map generator. 
 
 # Features
-The program accepts a specified map type (Continents, Dense Islands, etc) and generates a basic 1080x1920 rgb pillow Image object
+The program accepts a specified map type (Continents, Dense Islands, etc) and generates a basic 1080x1920 pillow Image object
 
 # How-To
 ```python
