@@ -20,9 +20,9 @@ Currently there are the following map types:
 
 #Requirements 
 
--scipy
--pillow
--numpy
+- scipy
+- pillow
+- numpy
 
 # Examples.
 
