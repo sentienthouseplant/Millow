@@ -50,5 +50,5 @@ map.toImage().show()
 
 # To-Do.
 
-[ ] Add water shading.
-[ ] Add option for discrete gradients.
+- [ ] Add water shading.
+- [ ] Add option for discrete gradients.
