@@ -3,7 +3,7 @@
 # - Produce a png of a map with various properties stipulated by the user.
 # ((159,193,100), (252, 234, 116), (230, 228, 220), (255, 255, 255))
 
-from PIL import Image
+from PIL import Image, ImageDraw
 import numpy as np
 from scipy.ndimage import zoom, gaussian_filter
 
@@ -25,8 +25,9 @@ def noiseArray(sizeTuple):
 # This function will smooth the resulting noise from the noiseArray. This essentially yields a map with some
 # basic landmasses. This is based on the cave generating cellular automata seen in many games.
 def cellularSmooth(
-    ar: np.array, overPop: int, underPop: int, bornPop: int, steps: int, borderValue=1
-) -> np.array:
+
+    ar: np.array, overPop: int, underPop: int, bornPop: int, steps: int, borderValue=1) -> np.array:
+
     """Smooths out a noisey array to produce geographical features."""
 
     ar = np.pad(
@@ -80,7 +81,6 @@ def cellularSmooth(
     ar = np.where(ar, 0, 1)  # Switches 0,1 in the array.
 
     return ar[1:height, 1:width]
-
 
 # This produces an array of values in the range [-1,1]. Editing the volativity and noiseProb yeilds an assortment of
 # possible height arrays.
@@ -182,6 +182,19 @@ def colorStrat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
 
 class Millow:
     def __init__(self, mapType: str):
+        """Initiates the millow object. 
+
+        Parameters
+        ----------
+        mapType : A string from the list of possible map types.
+            
+            Specifies the type of map to generate.
+
+        Raises
+        ------
+        Exception
+            Generates an exception if the given map type is not in the list of map types.
+        """
 
         possTypes = [
             "continents",
@@ -338,11 +351,72 @@ class Millow:
 
         resultImg = Image.alpha_composite(baseImg, heightImg)
 
-        return resultImg
+        self.img = resultImg
 
+    def addGrid(self,gridDensity: (int,int),lineWidth: int = 2,lineColor = 'white',borderWidth: int = 3):
+        """Adds a grid to the map image object. 
 
-if __name__ == "__main__":
+        Parameters
+        ----------
+        gridDensity : A 2-tuple of ints. 
+            (Number of squares horizonially, number of squares vertically)
+        lineWidth : Int, optional
+            The width of the grid lines in pixels, by default 2.
+        lineColor : A pillow color, optional
+            The color of the lines used for the grid, by default 'white'.
+        borderWidth: Int, optional
+            The width of the border of the whole map, by default 3.
+        """
 
-    map = Millow("sparse islands")
-    img = map.toImage()
-    img.show()
+        draw = ImageDraw.Draw(self.img)
+
+        #Gets the size of the generated image.
+        width,top = self.img.size
+
+        #Generates the spacing of the lines.
+        spaceWidth = width/gridDensity[0]
+        spaceHeight = top/gridDensity[1]
+
+        #Draws the horizonial lines
+        for y in range(0,gridDensity[1]):
+            
+            #Line Coords ((x start, y start), (x end, y end))
+            coords = ( (0,y*spaceHeight) , (width,y*spaceHeight))
+            draw.line(coords,width=lineWidth,fill=lineColor)
+
+        #Draws the vertical lines
+        for x in range(0,gridDensity[0]):
+            
+            #Line Coords ((x start, y start), (x end, y end))
+            coords = ( (x*spaceWidth,0) , (x*spaceWidth,top))
+            draw.line(coords,width=lineWidth,fill=lineColor)
+
+        #Draws the border of the map.
+        draw.rectangle([0,0,width-1,top-1],outline=lineColor,width=borderWidth)
+
+        del draw
+
+    def display(self):
+        """Displays the map.
+        """
+        self.img.show()
+
+if __name__=='__main__':
+
+    import cProfile, pstats, io
+    from pstats import SortKey
+
+    pr = cProfile.Profile()
+    pr.enable()
+    
+    map = Millow('sparse islands')
+    map.toImage()
+    map.addGrid((30,20))
+    map.display()
+    pr.disable()
+
+    sortby = SortKey.CUMULATIVE
+    s = io.StringIO()
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())
