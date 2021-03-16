@@ -25,8 +25,8 @@ def noiseArray(sizeTuple):
 # This function will smooth the resulting noise from the noiseArray. This essentially yields a map with some
 # basic landmasses. This is based on the cave generating cellular automata seen in many games.
 def cellularSmooth(
-
-    ar: np.array, overPop: int, underPop: int, bornPop: int, steps: int, borderValue=1) -> np.array:
+    ar: np.array, overPop: int, underPop: int, bornPop: int, steps: int, borderValue=1
+) -> np.array:
 
     """Smooths out a noisey array to produce geographical features."""
 
@@ -81,6 +81,7 @@ def cellularSmooth(
     ar = np.where(ar, 0, 1)  # Switches 0,1 in the array.
 
     return ar[1:height, 1:width]
+
 
 # This produces an array of values in the range [-1,1]. Editing the volativity and noiseProb yeilds an assortment of
 # possible height arrays.
@@ -181,14 +182,16 @@ def colorStrat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
 
 
 class Millow:
-    def __init__(self, mapType: str):
-        """Initiates the millow object. 
+    def __init__(self, mapType: str, mapSize: (int, int) = (1080, 1920)):
+        """Initiates the millow object.
 
         Parameters
         ----------
         mapType : A string from the list of possible map types.
-            
+
             Specifies the type of map to generate.
+
+        mapSize: A tuple (Height,Width) which specifies the map size.
 
         Raises
         ------
@@ -208,10 +211,8 @@ class Millow:
             )  # Raises an exception if the user
         # attempts to give a invalid choice of map type.
 
-        self.size = (
-            1080,
-            1920,
-        )  # The pixel size of the final image, currently not variable. Will be in future versions.
+        # The pixel size of the final image, currently not variable. Will be in future versions.
+        self.size = mapSize
 
         self.mapType = mapType  # Sets the map type. Currently unused.
 
@@ -250,7 +251,7 @@ class Millow:
         # the roughness.
 
         rawMap = rawMap[
-            0:1080, 0:1920
+            0:self.size[0], 0:self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
 
         self.rawMap = rawMap  # Saves the generated smooth map.
@@ -274,7 +275,7 @@ class Millow:
         # the roughness.
 
         alphaArray = alphaArray[
-            0:1080, 0:1920
+            0:self.size[0], 0:self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
 
         alphaArray = alphaArray.astype(
@@ -308,7 +309,7 @@ class Millow:
         bArray = np.interp(alphaArray, [0, 200, 255], [100, 116, 212])
 
         rawHeight = np.full(
-            (1080, 1920, 4), [255, 255, 255, 0], dtype=np.uint8
+            (self.size[0], self.size[1], 4), [255, 255, 255, 0], dtype=np.uint8
         )  # Produces a black RGBA array with zero opacity.
 
         rawHeight[
@@ -345,20 +346,29 @@ class Millow:
 
         colourMap[self.rawMap == 1] = [159, 193, 100, 255]  # Colours the 'earth'.
 
+        # Generates the raw image.
         baseImg = Image.fromarray(colourMap)
 
+        # Generates the heights image
         heightImg = Image.fromarray(self.rawHeight)
 
+        # Composites the heights over the raw images.
         resultImg = Image.alpha_composite(baseImg, heightImg)
 
         self.img = resultImg
 
-    def addGrid(self,gridDensity: (int,int),lineWidth: int = 2,lineColor = 'white',borderWidth: int = 3):
-        """Adds a grid to the map image object. 
+    def addGrid(
+        self,
+        gridDensity: (int, int),
+        lineWidth: int = 2,
+        lineColor="white",
+        borderWidth: int = 3,
+    ):
+        """Adds a grid to the map image object.
 
         Parameters
         ----------
-        gridDensity : A 2-tuple of ints. 
+        gridDensity : A 2-tuple of ints.
             (Number of squares horizonially, number of squares vertically)
         lineWidth : Int, optional
             The width of the grid lines in pixels, by default 2.
@@ -370,53 +380,40 @@ class Millow:
 
         draw = ImageDraw.Draw(self.img)
 
-        #Gets the size of the generated image.
-        width,top = self.img.size
+        # Gets the size of the generated image.
+        width, top = self.img.size
 
-        #Generates the spacing of the lines.
-        spaceWidth = width/gridDensity[0]
-        spaceHeight = top/gridDensity[1]
+        # Generates the spacing of the lines.
+        spaceWidth = width / gridDensity[0]
+        spaceHeight = top / gridDensity[1]
 
-        #Draws the horizonial lines
-        for y in range(0,gridDensity[1]):
-            
-            #Line Coords ((x start, y start), (x end, y end))
-            coords = ( (0,y*spaceHeight) , (width,y*spaceHeight))
-            draw.line(coords,width=lineWidth,fill=lineColor)
+        # Draws the horizonial lines
+        for y in range(0, gridDensity[1]):
 
-        #Draws the vertical lines
-        for x in range(0,gridDensity[0]):
-            
-            #Line Coords ((x start, y start), (x end, y end))
-            coords = ( (x*spaceWidth,0) , (x*spaceWidth,top))
-            draw.line(coords,width=lineWidth,fill=lineColor)
+            # Line Coords ((x start, y start), (x end, y end))
+            coords = ((0, y * spaceHeight), (width, y * spaceHeight))
+            draw.line(coords, width=lineWidth, fill=lineColor)
 
-        #Draws the border of the map.
-        draw.rectangle([0,0,width-1,top-1],outline=lineColor,width=borderWidth)
+        # Draws the vertical lines
+        for x in range(0, gridDensity[0]):
+
+            # Line Coords ((x start, y start), (x end, y end))
+            coords = ((x * spaceWidth, 0), (x * spaceWidth, top))
+            draw.line(coords, width=lineWidth, fill=lineColor)
+
+        # Draws the border of the map.
+        draw.rectangle([0, 0, width - 1, top - 1], outline=lineColor, width=borderWidth)
 
         del draw
 
     def display(self):
-        """Displays the map.
-        """
+        """Displays the map."""
         self.img.show()
 
-if __name__=='__main__':
 
-    import cProfile, pstats, io
-    from pstats import SortKey
+if __name__ == "__main__":
 
-    pr = cProfile.Profile()
-    pr.enable()
-    
-    map = Millow('sparse islands')
+    map = Millow("sparse islands",mapSize=(1000,1000))
     map.toImage()
-    map.addGrid((30,20))
+    map.addGrid((30, 20))
     map.display()
-    pr.disable()
-
-    sortby = SortKey.CUMULATIVE
-    s = io.StringIO()
-    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    ps.print_stats()
-    print(s.getvalue())
