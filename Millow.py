@@ -1,7 +1,7 @@
 # Outcomes of project.
 #
 # - Produce a png of a map with various properties stipulated by the user.
-# ((159,193,100), (252, 234, 116), (230, 228, 220), (255, 255, 255))
+
 
 from PIL import Image, ImageDraw
 import numpy as np
@@ -226,7 +226,7 @@ class Millow:
 
         self.rawsGenerated = False  # Used to see if a map has been generated.
 
-    def generateRawMap(self):
+    def generateBasic(self):
 
         """Generates a basic array with land and water."""
 
@@ -251,12 +251,23 @@ class Millow:
         # the roughness.
 
         rawMap = rawMap[
-            0:self.size[0], 0:self.size[1]
+            0 : self.size[0], 0 : self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
 
-        self.rawMap = rawMap  # Saves the generated smooth map.
+        self.rawMap = rawMap  # Saves the generated smooth map array.
 
-    def generateHeight(self):
+        colourMap = np.zeros(
+            [self.size[0], self.size[1], 4], dtype=np.uint8
+        )  # Initialises the RGBA array.
+
+        colourMap[self.rawMap == 0] = [79, 76, 176, 255]  # Colours the 'water'.
+
+        colourMap[self.rawMap == 1] = [159, 193, 100, 255]  # Colours the 'earth'.
+
+        # Generates the basic color map.
+        self.img = Image.fromarray(colourMap)
+
+    def addHeight(self):
 
         """Adds height levels to the rawMap property."""
 
@@ -275,7 +286,7 @@ class Millow:
         # the roughness.
 
         alphaArray = alphaArray[
-            0:self.size[0], 0:self.size[1]
+            0 : self.size[0], 0 : self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
 
         alphaArray = alphaArray.astype(
@@ -321,41 +332,11 @@ class Millow:
 
         self.rawHeight = rawHeight
 
-    def generateRaws(self):
-
-        "Generates the arrays needed for creating the final image."
-
-        self.generateRawMap()
-        self.generateHeight()
-
-        self.rawsGenerated = True
-
-    def toImage(self):
-
-        """Returns a colour pillow image object corresponding to the map."""
-
-        if not self.rawsGenerated:  # Checks if the raw map array has been generated.
-
-            self.generateRaws()
-
-        colourMap = np.zeros(
-            [self.size[0], self.size[1], 4], dtype=np.uint8
-        )  # Initialises the RGBA array.
-
-        colourMap[self.rawMap == 0] = [79, 76, 176, 255]  # Colours the 'water'.
-
-        colourMap[self.rawMap == 1] = [159, 193, 100, 255]  # Colours the 'earth'.
-
-        # Generates the raw image.
-        baseImg = Image.fromarray(colourMap)
-
         # Generates the heights image
         heightImg = Image.fromarray(self.rawHeight)
 
         # Composites the heights over the raw images.
-        resultImg = Image.alpha_composite(baseImg, heightImg)
-
-        self.img = resultImg
+        self.img = Image.alpha_composite(self.img, heightImg)
 
     def addGrid(
         self,
@@ -413,7 +394,8 @@ class Millow:
 
 if __name__ == "__main__":
 
-    map = Millow("sparse islands",mapSize=(1000,1000))
-    map.toImage()
-    map.addGrid((30, 20))
+    map = Millow("sparse islands", mapSize=(700, 700))
+    map.generateBasic()
+    map.addHeight()
+    map.addGrid((20, 20))
     map.display()
