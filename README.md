@@ -1,4 +1,4 @@
-# Millow (0.1.0)
+# Millow (0.1.1)
 A Python procedural map generator. 
 
 # Features
