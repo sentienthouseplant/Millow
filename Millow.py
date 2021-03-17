@@ -1,9 +1,9 @@
 # Outcomes of project.
 #
 # - Produce a png of a map with various properties stipulated by the user.
-# ((159,193,100), (252, 234, 116), (230, 228, 220), (255, 255, 255))
 
-from PIL import Image
+
+from PIL import Image, ImageDraw
 import numpy as np
 from scipy.ndimage import zoom, gaussian_filter
 
@@ -27,6 +27,7 @@ def noiseArray(sizeTuple):
 def cellularSmooth(
     ar: np.array, overPop: int, underPop: int, bornPop: int, steps: int, borderValue=1
 ) -> np.array:
+
     """Smooths out a noisey array to produce geographical features."""
 
     ar = np.pad(
@@ -181,7 +182,22 @@ def colorStrat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
 
 
 class Millow:
-    def __init__(self, mapType: str):
+    def __init__(self, mapType: str, mapSize: (int, int) = (1080, 1920)):
+        """Initiates the millow object.
+
+        Parameters
+        ----------
+        mapType : A string from the list of possible map types.
+
+            Specifies the type of map to generate.
+
+        mapSize: A tuple (Height,Width) which specifies the map size.
+
+        Raises
+        ------
+        Exception
+            Generates an exception if the given map type is not in the list of map types.
+        """
 
         possTypes = [
             "continents",
@@ -195,10 +211,8 @@ class Millow:
             )  # Raises an exception if the user
         # attempts to give a invalid choice of map type.
 
-        self.size = (
-            1080,
-            1920,
-        )  # The pixel size of the final image, currently not variable. Will be in future versions.
+        # The pixel size of the final image, currently not variable. Will be in future versions.
+        self.size = mapSize
 
         self.mapType = mapType  # Sets the map type. Currently unused.
 
@@ -212,7 +226,7 @@ class Millow:
 
         self.rawsGenerated = False  # Used to see if a map has been generated.
 
-    def generateRawMap(self):
+    def generateBasic(self):
 
         """Generates a basic array with land and water."""
 
@@ -237,12 +251,23 @@ class Millow:
         # the roughness.
 
         rawMap = rawMap[
-            0:1080, 0:1920
+            0 : self.size[0], 0 : self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
 
-        self.rawMap = rawMap  # Saves the generated smooth map.
+        self.rawMap = rawMap  # Saves the generated smooth map array.
 
-    def generateHeight(self):
+        colourMap = np.zeros(
+            [self.size[0], self.size[1], 4], dtype=np.uint8
+        )  # Initialises the RGBA array.
+
+        colourMap[self.rawMap == 0] = [79, 76, 176, 255]  # Colours the 'water'.
+
+        colourMap[self.rawMap == 1] = [159, 193, 100, 255]  # Colours the 'earth'.
+
+        # Generates the basic color map.
+        self.img = Image.fromarray(colourMap)
+
+    def addHeight(self):
 
         """Adds height levels to the rawMap property."""
 
@@ -261,7 +286,7 @@ class Millow:
         # the roughness.
 
         alphaArray = alphaArray[
-            0:1080, 0:1920
+            0 : self.size[0], 0 : self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
 
         alphaArray = alphaArray.astype(
@@ -295,7 +320,7 @@ class Millow:
         bArray = np.interp(alphaArray, [0, 200, 255], [100, 116, 212])
 
         rawHeight = np.full(
-            (1080, 1920, 4), [255, 255, 255, 0], dtype=np.uint8
+            (self.size[0], self.size[1], 4), [255, 255, 255, 0], dtype=np.uint8
         )  # Produces a black RGBA array with zero opacity.
 
         rawHeight[
@@ -307,42 +332,69 @@ class Millow:
 
         self.rawHeight = rawHeight
 
-    def generateRaws(self):
-
-        "Generates the arrays needed for creating the final image."
-
-        self.generateRawMap()
-        self.generateHeight()
-
-        self.rawsGenerated = True
-
-    def toImage(self):
-
-        """Returns a colour pillow image object corresponding to the map."""
-
-        if not self.rawsGenerated:  # Checks if the raw map array has been generated.
-
-            self.generateRaws()
-
-        colourMap = np.zeros(
-            [self.size[0], self.size[1], 4], dtype=np.uint8
-        )  # Initialises the RGBA array.
-
-        colourMap[self.rawMap == 0] = [79, 76, 176, 255]  # Colours the 'water'.
-
-        colourMap[self.rawMap == 1] = [159, 193, 100, 255]  # Colours the 'earth'.
-
-        baseImg = Image.fromarray(colourMap)
-
+        # Generates the heights image
         heightImg = Image.fromarray(self.rawHeight)
 
-        resultImg = Image.alpha_composite(baseImg, heightImg)
+        # Composites the heights over the raw images.
+        self.img = Image.alpha_composite(self.img, heightImg)
 
-        return resultImg
+    def addGrid(
+        self,
+        gridDensity: (int, int),
+        lineWidth: int = 2,
+        lineColor="white",
+        borderWidth: int = 3,
+    ):
+        """Adds a grid to the map image object.
+
+        Parameters
+        ----------
+        gridDensity : A 2-tuple of ints.
+            (Number of squares horizonially, number of squares vertically)
+        lineWidth : Int, optional
+            The width of the grid lines in pixels, by default 2.
+        lineColor : A pillow color, optional
+            The color of the lines used for the grid, by default 'white'.
+        borderWidth: Int, optional
+            The width of the border of the whole map, by default 3.
+        """
+
+        draw = ImageDraw.Draw(self.img)
+
+        # Gets the size of the generated image.
+        width, top = self.img.size
+
+        # Generates the spacing of the lines.
+        spaceWidth = width / gridDensity[0]
+        spaceHeight = top / gridDensity[1]
+
+        # Draws the horizonial lines
+        for y in range(0, gridDensity[1]):
+
+            # Line Coords ((x start, y start), (x end, y end))
+            coords = ((0, y * spaceHeight), (width, y * spaceHeight))
+            draw.line(coords, width=lineWidth, fill=lineColor)
+
+        # Draws the vertical lines
+        for x in range(0, gridDensity[0]):
+
+            # Line Coords ((x start, y start), (x end, y end))
+            coords = ((x * spaceWidth, 0), (x * spaceWidth, top))
+            draw.line(coords, width=lineWidth, fill=lineColor)
+
+        # Draws the border of the map.
+        draw.rectangle([0, 0, width - 1, top - 1], outline=lineColor, width=borderWidth)
+
+        del draw
+
+    def display(self):
+        """Displays the map."""
+        self.img.show()
 
 
 if __name__ == "__main__":
 
-    map = Millow("sparse islands")
-    img = map.toImage()
-    img.show()
+    map = Millow('sparse islands',mapSize=(1080,1920))
+    map.generateBasic()
+    map.addGrid(gridDensity=(10,10))
+    map.display()
