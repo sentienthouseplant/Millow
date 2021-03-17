@@ -394,8 +394,7 @@ class Millow:
 
 if __name__ == "__main__":
 
-    map = Millow("sparse islands", mapSize=(700, 700))
+    map = Millow('sparse islands',mapSize=(1080,1920))
     map.generateBasic()
-    map.addHeight()
-    map.addGrid((20, 20))
+    map.addGrid(gridDensity=(10,10))
     map.display()
