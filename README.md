@@ -51,3 +51,4 @@ map.addGrid(gridDensity=(10,10))
 # To Do.
 
 - [ ] Add water shading.
+- [ ] Remove gray/black dot bug.
