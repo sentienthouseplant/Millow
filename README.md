@@ -51,4 +51,5 @@ map.addGrid(gridDensity=(10,10))
 # To Do.
 
 - [ ] Add water shading.
+- [ ] Current gradient is unsightly, to be changed to more a discrete gradient.
 - [ ] Remove gray/black dot bug.
