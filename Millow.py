@@ -143,13 +143,13 @@ def height_array(size: (int, int), volat: float, noiseProb: float):
     return height_array
 
 
-def color_strat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
+def color_strat(alpha_array: np.array, ranges: list, colors: list) -> np.array:
     """Produces a rgba array with colors stratified according to the ranges given."""
 
     if not (len(colors) == len(ranges)):
         raise Exception("Each color in colors list must have a corresponding range.")
 
-    rArray = gArray = bArray = alphaArray
+    red_array = green_array = blue_array = alpha_array
 
     rValues = [i[0] for i in colors]
 
@@ -157,7 +157,7 @@ def color_strat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
 
     bValues = [i[2] for i in colors]
 
-    (a, b) = alphaArray.shape  # Unpacks size of a, a two dimensional array.
+    (a, b) = alpha_array.shape  # Unpacks size of a, a two dimensional array.
 
     resultArray = np.full(
         (a, b, 4), [255, 255, 255, 0], dtype=np.uint8
@@ -166,16 +166,16 @@ def color_strat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
     counter = 0
 
     for low in ranges:
-        rArray[(low <= a)] = rValues[counter]
-        gArray[(low <= a)] = gValues[counter]
-        bArray[(low <= a)] = bValues[counter]
+        red_array[(low <= a)] = rValues[counter]
+        green_array[(low <= a)] = gValues[counter]
+        blue_array[(low <= a)] = bValues[counter]
 
         counter = counter + 1
 
-    resultArray[:, :, 0] = rArray
-    resultArray[:, :, 1] = gArray
-    resultArray[:, :, 2] = bArray
-    resultArray[:, :, 3] = alphaArray
+    resultArray[:, :, 0] = red_array
+    resultArray[:, :, 1] = green_array
+    resultArray[:, :, 2] = blue_array
+    resultArray[:, :, 3] = alpha_array
 
     img = Image.fromarray(resultArray)
     img.show()
@@ -184,16 +184,16 @@ def color_strat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
 
 
 class Millow:
-    def __init__(self, map_type: str, mapSize: (int, int) = (1080, 1920)):
+    def __init__(self, given_map_type: str, map_size: (int, int) = (1080, 1920)):
         """Initiates the millow object.
 
         Parameters
         ----------
-        map_type : A string from the list of possible map types.
+        given_map_type : A string from the list of possible map types.
 
             Specifies the type of map to generate.
 
-        mapSize: A tuple (Height,Width) which specifies the map size.
+        map_size: A tuple (Height,Width) which specifies the map size.
 
         Raises
         ------
@@ -201,22 +201,26 @@ class Millow:
             Generates an exception if the given map type is not in the list of map types.
         """
 
-        possTypes = [
+        possible_map_types = [
             "continents",
             "dense islands",
             "sparse islands",
         ]  # Possible map types, will be updated as I find more.
+        if type(given_map_type) != str:
+            raise TypeError(
+                'The map type must be a string and one of the possible options.'
+            )
 
-        if map_type not in possTypes:
-            raise Exception(
+        if given_map_type not in possible_map_types:
+            raise ValueError(
                 "The map type must be one of the possible options."
             )  # Raises an exception if the user
         # attempts to give a invalid choice of map type.
 
         # The pixel size of the final image, currently not variable. Will be in future versions.
-        self.size = mapSize
+        self.size = map_size
 
-        self.map_type = map_type  # Sets the map type. Currently unused.
+        self.map_type = given_map_type  # Sets the map type. Currently unused.
 
         self.map_type_dict = {
             "continents": (9, 4, 6, 10, 1),
@@ -273,91 +277,91 @@ class Millow:
 
         """Adds height levels to the raw_map property."""
 
-        alphaArray = noise_array(
+        alpha_array = noise_array(
             (int(self.size[0] / 5), int(self.size[1] / 5))
         )  # Size is divided by 50 since it will be zoomed by this
         # amount to create smooth features. This uses percolation at the critical probability for features of all sizes.
 
-        alphaArray = cellular_smooth(
-            alphaArray, 9, 2, 6, 17, borderValue=0
+        alpha_array = cellular_smooth(
+            alpha_array, 9, 2, 6, 17, borderValue=0
         )  # Dense islands.
 
-        alphaArray = zoom(
-            alphaArray, 5
+        alpha_array = zoom(
+            alpha_array, 5
         )  # Zooming the array restores it to the intended pixel dimensions and smooths out
         # the roughness.
 
-        alphaArray = alphaArray[
+        alpha_array = alpha_array[
             0 : self.size[0], 0 : self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
 
-        alphaArray = alphaArray.astype(
+        alpha_array = alpha_array.astype(
             np.float32
         )  # Changes the datatype so that Gaussian blur and divison work with the
         # desired accuracy.
 
-        alphaArray[
+        alpha_array[
             self.raw_map == 0
         ] = 0  # This masks the height array, so only value which correspond to '1's in the
         # raw_map are kept. The rest are set to zero. Thus zero is 'sea level'.
 
-        alphaArray = gaussian_filter(alphaArray, 20)  # Blurs the image significantly.
+        alpha_array = gaussian_filter(alpha_array, 20)  # Blurs the image significantly.
 
-        alphaArray[
+        alpha_array[
             self.raw_map == 0
         ] = 0  # Remasks the array, now there is some coastal smoothing.
 
-        alphaArray = (
-            (alphaArray - np.amin(alphaArray)) / np.amax(alphaArray)
+        alpha_array = (
+            (alpha_array - np.amin(alpha_array)) / np.amax(alpha_array)
         ) * 255  # All values will be in the range (0,255).
 
-        alphaArray = alphaArray.astype(np.uint8)
+        alpha_array = alpha_array.astype(np.uint8)
 
         # Gradient Heights
 
-        rArray = np.interp(alphaArray, [0, 200, 255], [159, 252, 253])
+        red_array = np.interp(alpha_array, [0, 200, 255], [159, 252, 253])
         #
-        gArray = np.interp(alphaArray, [0, 200, 255], [193, 234, 250])
+        green_array = np.interp(alpha_array, [0, 200, 255], [193, 234, 250])
         #
-        bArray = np.interp(alphaArray, [0, 200, 255], [100, 116, 212])
+        blue_array = np.interp(alpha_array, [0, 200, 255], [100, 116, 212])
 
-        rawHeight = np.full(
+        raw_height = np.full(
             (self.size[0], self.size[1], 4), [255, 255, 255, 0], dtype=np.uint8
         )  # Produces a black RGBA array with zero opacity.
 
-        rawHeight[
+        raw_height[
             :, :, 3
-        ] = alphaArray  # Sets the opaticy of the rawHeight array to the one we generated.
-        rawHeight[:, :, 0] = rArray
-        rawHeight[:, :, 1] = gArray
-        rawHeight[:, :, 2] = bArray
+        ] = alpha_array  # Sets the opaticy of the raw_height array to the one we generated.
+        raw_height[:, :, 0] = red_array
+        raw_height[:, :, 1] = green_array
+        raw_height[:, :, 2] = blue_array
 
-        self.rawHeight = rawHeight
+        self.raw_height = raw_height
 
         # Generates the heights image
-        heightImg = Image.fromarray(self.rawHeight)
+        height_image = Image.fromarray(self.raw_height)
 
         # Composites the heights over the raw images.
-        self.img = Image.alpha_composite(self.img, heightImg)
+        self.img = Image.alpha_composite(self.img, height_image)
 
     def add_grid(
         self,
-        gridDensity: (int, int),
-        lineWidth: int = 2,
-        lineColor="white",
-        borderWidth: int = 3,
+        grid_size: (int, int),
+        line_width: int = 2,
+        line_color="white",
+        border_width: int = 3,
     ):
         """Adds a grid to the map image object.
 
         Parameters
         ----------
-        gridDensity : A 2-tuple of ints.
+        grid_size : A 2-tuple of ints.
             (Number of squares horizonially, number of squares vertically)
-        lineWidth : Int, optional
+        line_width : Int, optional
             The width of the grid lines in pixels, by default 2.
-        lineColor : A pillow color, optional
+        line_color : A pillow color, optional
             The color of the lines used for the grid, by default 'white'.
-        borderWidth: Int, optional
+        border_width: Int, optional
             The width of the border of the whole map, by default 3.
         """
 
@@ -367,25 +371,25 @@ class Millow:
         width, top = self.img.size
 
         # Generates the spacing of the lines.
-        spaceWidth = width / gridDensity[0]
-        spaceHeight = top / gridDensity[1]
+        space_width = width / grid_size[0]
+        space_height = top / grid_size[1]
 
         # Draws the horizonial lines
-        for y in range(0, gridDensity[1]):
+        for y in range(0, grid_size[1]):
 
             # Line Coords ((x start, y start), (x end, y end))
-            coords = ((0, y * spaceHeight), (width, y * spaceHeight))
-            draw.line(coords, width=lineWidth, fill=lineColor)
+            coords = ((0, y * space_height), (width, y * space_height))
+            draw.line(coords, width=line_width, fill=line_color)
 
         # Draws the vertical lines
-        for x in range(0, gridDensity[0]):
+        for x in range(0, grid_size[0]):
 
             # Line Coords ((x start, y start), (x end, y end))
-            coords = ((x * spaceWidth, 0), (x * spaceWidth, top))
-            draw.line(coords, width=lineWidth, fill=lineColor)
+            coords = ((x * space_width, 0), (x * space_width, top))
+            draw.line(coords, width=line_width, fill=line_color)
 
         # Draws the border of the map.
-        draw.rectangle([0, 0, width - 1, top - 1], outline=lineColor, width=borderWidth)
+        draw.rectangle([0, 0, width - 1, top - 1], outline=line_color, width=border_width)
 
         del draw
 
@@ -396,7 +400,7 @@ class Millow:
 
 if __name__ == "__main__":
 
-    map = Millow("sparse islands", mapSize=(1080, 1920))
+    map = Millow("sparse islands", map_size=(1080, 1920))
     map.generate_basic()
     map.add_height()
     map.display()
