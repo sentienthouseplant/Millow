@@ -47,3 +47,9 @@ map.add_grid(grid_size=(10,10))
 
 ### Sparse Islands.
 ![Dense Islands](https://github.com/Jackbytes/Millow-Map/blob/main/img/sparseislands.png "Sparse Islands")
+
+# To Do.
+
+- [ ] Add water shading.
+- [ ] Current gradient is unsightly, to be changed to more a discrete gradient.
+- [ ] Remove gray/black dot bug.
