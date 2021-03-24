@@ -8,7 +8,7 @@ import numpy as np
 from scipy.ndimage import zoom, gaussian_filter
 
 # Constants used--------------------------------------------
-CRIT_PROB = 0.59274621
+GLOBAL_CRIT_PROB = 0.59274621
 
 
 # The functions---------------------------------------------
@@ -16,15 +16,15 @@ CRIT_PROB = 0.59274621
 # This function produces a example of percolation. Please see the wikipedia article for more infomation.
 # At a special occupation probability we get holes of all sizes (fractals). This would be a good candidate
 # for an initial noise array to used for the map.
-def noiseArray(sizeTuple):
-    prob = CRIT_PROB
+def noise_array(sizeTuple):
+    prob = GLOBAL_CRIT_PROB
     ar = np.random.choice([0, 1], p=[1 - prob, prob], size=sizeTuple)
     return ar
 
 
-# This function will smooth the resulting noise from the noiseArray. This essentially yields a map with some
+# This function will smooth the resulting noise from the noise_array. This essentially yields a map with some
 # basic landmasses. This is based on the cave generating cellular automata seen in many games.
-def cellularSmooth(
+def cellular_smooth(
     ar: np.array, overPop: int, underPop: int, bornPop: int, steps: int, borderValue=1
 ) -> np.array:
 
@@ -85,7 +85,7 @@ def cellularSmooth(
 
 # This produces an array of values in the range [-1,1]. Editing the volativity and noiseProb yeilds an assortment of
 # possible height arrays.
-def heightArray(size: (int, int), volat: float, noiseProb: float):
+def height_array(size: (int, int), volat: float, noiseProb: float):
     """Returns a height profile given a 2-tuple and volatility."""
 
     if len(size) != 2:
@@ -93,26 +93,28 @@ def heightArray(size: (int, int), volat: float, noiseProb: float):
 
     rng = np.random.default_rng()  # A local rng used in this function.
 
-    heightArray = np.zeros(size)  # Initialises the array with zeros.
+    height_array = np.zeros(size)  # Initialises the array with zeros.
 
-    heightArray[0, 0] = rng.uniform(
+    height_array[0, 0] = rng.uniform(
         low=-1, high=1
     )  # The first value is given some initial value from U[0,1].
 
-    heightArray[0, 1] = rng.uniform(low=-1, high=1)
+    height_array[0, 1] = rng.uniform(low=-1, high=1)
 
-    heightArray[1, 0] = rng.uniform(low=-1, high=1)
+    height_array[1, 0] = rng.uniform(low=-1, high=1)
 
     for x0 in range(2, size[1]):  # Iterates over the first row, initialising it.
         if (
             rng.uniform() < noiseProb
         ):  # This is the chance that some independent randomness is introduced.
-            heightArray[0, x0] = rng.uniform(low=-1, high=1)
+            height_array[0, x0] = rng.uniform(low=-1, high=1)
         else:
             uni = rng.uniform(low=-1, high=1)
-            point1 = heightArray[0, x0 - 2]  # The value 2 places back in the first row.
-            point2 = heightArray[0, x0 - 1]  # The value 1 place back in the first row.
-            heightArray[0, x0] = (
+            point1 = height_array[
+                0, x0 - 2
+            ]  # The value 2 places back in the first row.
+            point2 = height_array[0, x0 - 1]  # The value 1 place back in the first row.
+            height_array[0, x0] = (
                 (point1 + point2) / 2
             ) + volat * uni  # Calulates the midpoint and adds a weighted U[-1,1].
         # This should add some dependence that results in sequences of similar values.
@@ -121,27 +123,27 @@ def heightArray(size: (int, int), volat: float, noiseProb: float):
         2, size[0]
     ):  # See above for loop. This repeats the above but for the first column.
         if rng.uniform() < noiseProb:
-            heightArray[y0, 0] = rng.uniform(low=-1, high=1)
+            height_array[y0, 0] = rng.uniform(low=-1, high=1)
         else:
             uni = rng.uniform(low=-1, high=1)
-            point1 = heightArray[y0 - 2, 0]
-            point2 = heightArray[y0 - 1, 0]
-            heightArray[y0, 0] = ((point1 + point2) / 2) + volat * uni
+            point1 = height_array[y0 - 2, 0]
+            point2 = height_array[y0 - 1, 0]
+            height_array[y0, 0] = ((point1 + point2) / 2) + volat * uni
 
     for y in range(1, size[0]):  #
         for x in range(1, size[1]):
             if rng.uniform() < noiseProb:
-                heightArray[y, x] = rng.uniform(low=-1, high=1)
+                height_array[y, x] = rng.uniform(low=-1, high=1)
             else:
                 uni = rng.uniform(low=-1, high=1)
-                point1 = heightArray[y - 1, x]
-                point2 = heightArray[y, x - 1]
-                heightArray[y, x] = ((point1 + point2) / 2) + volat * uni
+                point1 = height_array[y - 1, x]
+                point2 = height_array[y, x - 1]
+                height_array[y, x] = ((point1 + point2) / 2) + volat * uni
 
-    return heightArray
+    return height_array
 
 
-def colorStrat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
+def color_strat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
     """Produces a rgba array with colors stratified according to the ranges given."""
 
     if not (len(colors) == len(ranges)):
@@ -182,12 +184,12 @@ def colorStrat(alphaArray: np.array, ranges: list, colors: list) -> np.array:
 
 
 class Millow:
-    def __init__(self, mapType: str, mapSize: (int, int) = (1080, 1920)):
+    def __init__(self, map_type: str, mapSize: (int, int) = (1080, 1920)):
         """Initiates the millow object.
 
         Parameters
         ----------
-        mapType : A string from the list of possible map types.
+        map_type : A string from the list of possible map types.
 
             Specifies the type of map to generate.
 
@@ -205,7 +207,7 @@ class Millow:
             "sparse islands",
         ]  # Possible map types, will be updated as I find more.
 
-        if mapType not in possTypes:
+        if map_type not in possTypes:
             raise Exception(
                 "The map type must be one of the possible options."
             )  # Raises an exception if the user
@@ -214,69 +216,69 @@ class Millow:
         # The pixel size of the final image, currently not variable. Will be in future versions.
         self.size = mapSize
 
-        self.mapType = mapType  # Sets the map type. Currently unused.
+        self.map_type = map_type  # Sets the map type. Currently unused.
 
-        self.mapTypeDict = {
+        self.map_type_dict = {
             "continents": (9, 4, 6, 10, 1),
             "dense islands": (7, 1, 9, 15, 0),
             "sparse islands": (9, 2, 6, 18, 1),
         }
-        # A dictionary which maps the users selected map type to the inputs of cellularSmooth. Inputs discovered by
+        # A dictionary which maps the users selected map type to the inputs of cellular_smooth. Inputs discovered by
         # experimentation.
 
         self.rawsGenerated = False  # Used to see if a map has been generated.
 
-    def generateBasic(self):
+    def generate_basic(self):
 
         """Generates a basic array with land and water."""
 
-        rawMap = noiseArray(
+        raw_map = noise_array(
             (int(self.size[0] / 50), int(self.size[1] / 50))
         )  # Size is divided by 50 since it will be zoomed by this
         # amount to create smooth features. This uses percolation at the critical probability for features of all sizes.
 
-        (a, b, c, d, e) = self.mapTypeDict[
-            self.mapType
+        (a, b, c, d, e) = self.map_type_dict[
+            self.map_type
         ]  # Unpacks the constants used for the smoothing procedure, which
         # produces the desired map type.
 
-        rawMap = cellularSmooth(
-            rawMap, a, b, c, d, borderValue=e
+        raw_map = cellular_smooth(
+            raw_map, a, b, c, d, borderValue=e
         )  # See above for an explanation of a,b,c,d,e. This smooths the noise
-        # produced by noiseArray.
+        # produced by noise_array.
 
-        rawMap = zoom(
-            rawMap, 50
+        raw_map = zoom(
+            raw_map, 50
         )  # Zooming the array restores it to the intended pixel dimensions and smooths out
         # the roughness.
 
-        rawMap = rawMap[
+        raw_map = raw_map[
             0 : self.size[0], 0 : self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
 
-        self.rawMap = rawMap  # Saves the generated smooth map array.
+        self.raw_map = raw_map  # Saves the generated smooth map array.
 
-        colourMap = np.zeros(
+        colour_map = np.zeros(
             [self.size[0], self.size[1], 4], dtype=np.uint8
         )  # Initialises the RGBA array.
 
-        colourMap[self.rawMap == 0] = [79, 76, 176, 255]  # Colours the 'water'.
+        colour_map[self.raw_map == 0] = [79, 76, 176, 255]  # Colours the 'water'.
 
-        colourMap[self.rawMap == 1] = [159, 193, 100, 255]  # Colours the 'earth'.
+        colour_map[self.raw_map == 1] = [159, 193, 100, 255]  # Colours the 'earth'.
 
         # Generates the basic color map.
-        self.img = Image.fromarray(colourMap)
+        self.img = Image.fromarray(colour_map)
 
-    def addHeight(self):
+    def add_height(self):
 
-        """Adds height levels to the rawMap property."""
+        """Adds height levels to the raw_map property."""
 
-        alphaArray = noiseArray(
+        alphaArray = noise_array(
             (int(self.size[0] / 5), int(self.size[1] / 5))
         )  # Size is divided by 50 since it will be zoomed by this
         # amount to create smooth features. This uses percolation at the critical probability for features of all sizes.
 
-        alphaArray = cellularSmooth(
+        alphaArray = cellular_smooth(
             alphaArray, 9, 2, 6, 17, borderValue=0
         )  # Dense islands.
 
@@ -295,14 +297,14 @@ class Millow:
         # desired accuracy.
 
         alphaArray[
-            self.rawMap == 0
+            self.raw_map == 0
         ] = 0  # This masks the height array, so only value which correspond to '1's in the
-        # rawMap are kept. The rest are set to zero. Thus zero is 'sea level'.
+        # raw_map are kept. The rest are set to zero. Thus zero is 'sea level'.
 
         alphaArray = gaussian_filter(alphaArray, 20)  # Blurs the image significantly.
 
         alphaArray[
-            self.rawMap == 0
+            self.raw_map == 0
         ] = 0  # Remasks the array, now there is some coastal smoothing.
 
         alphaArray = (
@@ -338,7 +340,7 @@ class Millow:
         # Composites the heights over the raw images.
         self.img = Image.alpha_composite(self.img, heightImg)
 
-    def addGrid(
+    def add_grid(
         self,
         gridDensity: (int, int),
         lineWidth: int = 2,
@@ -394,7 +396,7 @@ class Millow:
 
 if __name__ == "__main__":
 
-    map = Millow('sparse islands',mapSize=(1080,1920))
-    map.generateBasic()
-    map.addGrid(gridDensity=(10,10))
+    map = Millow("sparse islands", mapSize=(1080, 1920))
+    map.generate_basic()
+    map.add_height()
     map.display()
