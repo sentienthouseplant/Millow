@@ -3,19 +3,21 @@
 # - Produce a png of a map with various properties stipulated by the user.
 
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
 from scipy.ndimage import zoom, gaussian_filter
 
 # Constants used--------------------------------------------
 GLOBAL_CRIT_PROB = 0.59274621
+GLOBAL_BLUR_TEST = True
+DEBUG = False
 
 
 # The functions---------------------------------------------
 
 # This function produces a example of percolation. Please see the wikipedia article for more infomation.
 # At a special occupation probability we get holes of all sizes (fractals). This would be a good candidate
-# for an initial noise array to used for the map.
+# for an initial noise array to used for the map, because map feautres of all sizes will be generated.
 def noise_array(sizeTuple):
     prob = GLOBAL_CRIT_PROB
     ar = np.random.choice([0, 1], p=[1 - prob, prob], size=sizeTuple)
@@ -85,7 +87,7 @@ def cellular_smooth(
 
 # This produces an array of values in the range [-1,1]. Editing the volativity and noiseProb yeilds an assortment of
 # possible height arrays.
-def height_array(size: (int, int), volat: float, noiseProb: float):
+def unused_height_array(size: (int, int), volat: float, noiseProb: float):
     """Returns a height profile given a 2-tuple and volatility."""
 
     if len(size) != 2:
@@ -143,46 +145,6 @@ def height_array(size: (int, int), volat: float, noiseProb: float):
     return height_array
 
 
-def color_strat(alpha_array: np.array, ranges: list, colors: list) -> np.array:
-    """Produces a rgba array with colors stratified according to the ranges given."""
-
-    if not (len(colors) == len(ranges)):
-        raise Exception("Each color in colors list must have a corresponding range.")
-
-    red_array = green_array = blue_array = alpha_array
-
-    rValues = [i[0] for i in colors]
-
-    gValues = [i[1] for i in colors]
-
-    bValues = [i[2] for i in colors]
-
-    (a, b) = alpha_array.shape  # Unpacks size of a, a two dimensional array.
-
-    resultArray = np.full(
-        (a, b, 4), [255, 255, 255, 0], dtype=np.uint8
-    )  # Creates a rgba array.
-
-    counter = 0
-
-    for low in ranges:
-        red_array[(low <= a)] = rValues[counter]
-        green_array[(low <= a)] = gValues[counter]
-        blue_array[(low <= a)] = bValues[counter]
-
-        counter = counter + 1
-
-    resultArray[:, :, 0] = red_array
-    resultArray[:, :, 1] = green_array
-    resultArray[:, :, 2] = blue_array
-    resultArray[:, :, 3] = alpha_array
-
-    img = Image.fromarray(resultArray)
-    img.show()
-
-    return resultArray
-
-
 class Millow:
     def __init__(self, given_map_type: str, map_size: (int, int) = (1080, 1920)):
         """Initiates the millow object.
@@ -208,7 +170,7 @@ class Millow:
         ]  # Possible map types, will be updated as I find more.
         if type(given_map_type) != str:
             raise TypeError(
-                'The map type must be a string and one of the possible options.'
+                "The map type must be a string and one of the possible options."
             )
 
         if given_map_type not in possible_map_types:
@@ -273,27 +235,39 @@ class Millow:
         # Generates the basic color map.
         self.img = Image.fromarray(colour_map)
 
+        if (
+            GLOBAL_BLUR_TEST == True
+        ):  # Experimenting with mild blurring for better looking land-sea boundaries.
+
+            self.img = self.img.filter(ImageFilter.GaussianBlur(radius=0.5))
+
     def add_height(self):
 
         """Adds height levels to the raw_map property."""
 
-        alpha_array = noise_array(
+        temp_array_1 = noise_array(
             (int(self.size[0] / 5), int(self.size[1] / 5))
         )  # Size is divided by 50 since it will be zoomed by this
         # amount to create smooth features. This uses percolation at the critical probability for features of all sizes.
 
-        alpha_array = cellular_smooth(
-            alpha_array, 9, 2, 6, 17, borderValue=0
+        temp_array_1 = cellular_smooth(
+            temp_array_1, 9, 2, 6, 15, borderValue=0
         )  # Dense islands.
 
-        alpha_array = zoom(
-            alpha_array, 5
+        temp_array_1 = zoom(
+            temp_array_1, 5
         )  # Zooming the array restores it to the intended pixel dimensions and smooths out
         # the roughness.
 
-        alpha_array = alpha_array[
+        temp_array_1 = temp_array_1[
             0 : self.size[0], 0 : self.size[1]
         ]  # Trims any extra entries possibly caused by rounding.
+
+        alpha_array = temp_array_1
+
+        if DEBUG == True:
+
+            Image.fromarray(alpha_array.astype("uint8") * 255).show()
 
         alpha_array = alpha_array.astype(
             np.float32
@@ -340,6 +314,9 @@ class Millow:
 
         # Generates the heights image
         height_image = Image.fromarray(self.raw_height)
+        if DEBUG == True:
+
+            height_image.show()
 
         # Composites the heights over the raw images.
         self.img = Image.alpha_composite(self.img, height_image)
@@ -389,7 +366,9 @@ class Millow:
             draw.line(coords, width=line_width, fill=line_color)
 
         # Draws the border of the map.
-        draw.rectangle([0, 0, width - 1, top - 1], outline=line_color, width=border_width)
+        draw.rectangle(
+            [0, 0, width - 1, top - 1], outline=line_color, width=border_width
+        )
 
         del draw
 
@@ -400,7 +379,8 @@ class Millow:
 
 if __name__ == "__main__":
 
-    map = Millow("sparse islands", map_size=(1080, 1920))
+    DEBUG = False
+    map = Millow("continents", map_size=(1000, 1000))
     map.generate_basic()
     map.add_height()
     map.display()
