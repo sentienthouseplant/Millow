@@ -145,6 +145,17 @@ def unused_height_array(size: (int, int), volat: float, noiseProb: float):
     return height_array
 
 
+def discrete_array(given_array: np.array, values: [(int, int)]):
+
+    temp_array = np.zeros(given_array.shape)
+
+    for i in range(0, len(values)):
+
+        temp_array[given_array >= values[i][0]] = values[i][1]
+
+    return temp_array
+
+
 class Millow:
     def __init__(self, given_map_type: str, map_size: (int, int) = (1080, 1920)):
         """Initiates the millow object.
@@ -241,21 +252,21 @@ class Millow:
 
             self.img = self.img.filter(ImageFilter.GaussianBlur(radius=0.5))
 
-    def add_height(self):
+    def add_height(self, discrete=True, mountain_density=5):
 
         """Adds height levels to the raw_map property."""
 
-        temp_array_1 = noise_array(
-            (int(self.size[0] / 5), int(self.size[1] / 5))
+        temp_array_1 = unused_height_array(
+            (int(self.size[0] / 3), int(self.size[1] / 3)), volat=5, noiseProb=0.09
         )  # Size is divided by 50 since it will be zoomed by this
         # amount to create smooth features. This uses percolation at the critical probability for features of all sizes.
 
         temp_array_1 = cellular_smooth(
-            temp_array_1, 9, 2, 6, 15, borderValue=0
+            temp_array_1, 8, 3, 6, 2, borderValue=1
         )  # Dense islands.
 
         temp_array_1 = zoom(
-            temp_array_1, 5
+            temp_array_1, 3
         )  # Zooming the array restores it to the intended pixel dimensions and smooths out
         # the roughness.
 
@@ -279,7 +290,9 @@ class Millow:
         ] = 0  # This masks the height array, so only value which correspond to '1's in the
         # raw_map are kept. The rest are set to zero. Thus zero is 'sea level'.
 
-        alpha_array = gaussian_filter(alpha_array, 20)  # Blurs the image significantly.
+        alpha_array = gaussian_filter(
+            alpha_array, (25 - 1.5 * mountain_density)
+        )  # Blurs the image significantly. Controls mountain density.
 
         alpha_array[
             self.raw_map == 0
@@ -291,13 +304,37 @@ class Millow:
 
         alpha_array = alpha_array.astype(np.uint8)
 
-        # Gradient Heights
+        if DEBUG:
 
-        red_array = np.interp(alpha_array, [0, 200, 255], [159, 252, 253])
-        #
-        green_array = np.interp(alpha_array, [0, 200, 255], [193, 234, 250])
-        #
-        blue_array = np.interp(alpha_array, [0, 200, 255], [100, 116, 212])
+            Image.fromarray(alpha_array).show()
+
+        if not discrete:
+
+            # Continuious colouring.
+
+            red_array = np.interp(alpha_array, [0, 210, 245, 255], [159, 252, 128, 255])
+            #
+            green_array = np.interp(
+                alpha_array, [0, 210, 245, 255], [193, 234, 128, 255]
+            )
+            #
+            blue_array = np.interp(
+                alpha_array, [0, 210, 245, 255], [100, 116, 128, 255]
+            )
+
+        if discrete:
+
+            # Discrete colouring.
+
+            red_array = discrete_array(
+                alpha_array, [(0, 159), (120, 200), (180, 252), (225, 128), (250, 255)]
+            )
+            green_array = discrete_array(
+                alpha_array, [(0, 193), (120, 210), (180, 234), (225, 128), (250, 255)]
+            )
+            blue_array = discrete_array(
+                alpha_array, [(0, 100), (120, 105), (180, 116), (225, 128), (250, 225)]
+            )
 
         raw_height = np.full(
             (self.size[0], self.size[1], 4), [255, 255, 255, 0], dtype=np.uint8
@@ -379,8 +416,7 @@ class Millow:
 
 if __name__ == "__main__":
 
-    DEBUG = False
-    map = Millow("continents", map_size=(1000, 1000))
+    map = Millow("dense islands", map_size=(1500, 1500))
     map.generate_basic()
-    map.add_height()
+    map.add_height(mountain_density=10)
     map.display()
