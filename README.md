@@ -32,16 +32,6 @@ Currently there are the following map types:
 
 ## Input.
 ```python
-map = Millow('continents',mapSize=(1000,1000))
-map.generate_basic()
-map.add_heights()
-
-map = Millow('sparse islands',mapSize=(1080,1920))
-map.generate_basic()
-map.add_grid(grid_size=(10,10))
-```
-## Input.
-```python
 
 map = Millow.Millow('continents',map_size=(1000,1000))
 map.generate_basic()
@@ -51,11 +41,6 @@ map.display()
 map = Millow.Millow('sparse islands',map_size=(1080,1920))
 map.generate_basic()
 map.add_grid(grid_size=(10,10))
-map.display()
-
-map = Millow.Millow('dense islands',map_size=(1080,1920))
-map.generate_basic()
-map.add_height(mountain_roughness=0)
 map.display()
 
 map = Millow.Millow('dense islands',map_size=(1000,1000))
