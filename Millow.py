@@ -252,7 +252,7 @@ class Millow:
 
             self.img = self.img.filter(ImageFilter.GaussianBlur(radius=0.5))
 
-    def add_height(self, discrete=True, mountain_density=5):
+    def add_height(self, discrete=True, mountain_roughness=5):
 
         """Adds height levels to the raw_map property."""
 
@@ -291,7 +291,7 @@ class Millow:
         # raw_map are kept. The rest are set to zero. Thus zero is 'sea level'.
 
         alpha_array = gaussian_filter(
-            alpha_array, (25 - 1.5 * mountain_density)
+            alpha_array, (25 - 1.5 * mountain_roughness)
         )  # Blurs the image significantly. Controls mountain density.
 
         alpha_array[
@@ -416,7 +416,19 @@ class Millow:
 
 if __name__ == "__main__":
 
+    import cProfile, pstats, io
+    from pstats import SortKey
+    pr = cProfile.Profile()
+    pr.enable()
+
     map = Millow("dense islands", map_size=(1500, 1500))
     map.generate_basic()
-    map.add_height(mountain_density=10)
+    map.add_height(mountain_roughness=10)
     map.display()
+
+    pr.disable()
+    s = io.StringIO()
+    sortby = SortKey.CUMULATIVE
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())
