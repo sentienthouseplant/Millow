@@ -65,3 +65,5 @@ map.display()
 - [x] Current gradient is unsightly, to be changed to more a discrete gradient.
 - [ ] Remove gray/black dot bug.
 - [ ] Make map homeomorphic (ish) to a sphere.
+- [ ] Lakes
+- [ ] Biomes
