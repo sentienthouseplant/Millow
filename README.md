@@ -27,6 +27,7 @@ Currently there are the following map types:
 - scipy
 - pillow
 - numpy
+- numba
 
 # Examples.
 
