@@ -63,3 +63,11 @@ map.display()
 
 ### Dense Islands.
 ![Dense Islands](https://github.com/Jackbytes/Millow-Map/blob/main/img/denseislands.png "Dense Islands")
+=======
+![Dense Islands](https://github.com/Jackbytes/Millow-Map/blob/main/img/sparseislands.png "Sparse Islands")
+
+# To Do.
+
+- [ ] Add water shading.
+- [ ] Current gradient is unsightly, to be changed to more a discrete gradient.
+- [ ] Remove gray/black dot bug.
