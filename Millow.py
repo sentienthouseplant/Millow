@@ -5,6 +5,7 @@
 
 from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
+import numba
 from scipy.ndimage import zoom, gaussian_filter
 
 # Constants used--------------------------------------------
@@ -24,18 +25,16 @@ def noise_array(sizeTuple):
     return ar
 
 
-# This function will smooth the resulting noise from the noise_array. This essentially yields a map with some
-# basic landmasses. This is based on the cave generating cellular automata seen in many games.
-def cellular_smooth(
-    ar: np.array, overPop: int, underPop: int, bornPop: int, steps: int, borderValue=1
-) -> np.array:
-
-    """Smooths out a noisey array to produce geographical features."""
-
-    ar = np.pad(
-        ar, 1, constant_values=borderValue
-    )  # Pads the array so we don't have to have special logic for edges.
-    height, width = ar.shape  # Gets the width and height of the padded array.
+@numba.njit()
+def numba_cell_smoother(
+    ar: np.array,
+    overPop: int,
+    underPop: int,
+    bornPop: int,
+    steps: int,
+    width: int,
+    height: int,
+):
 
     for step in range(0, steps + 1):
 
@@ -79,6 +78,25 @@ def cellular_smooth(
                     else:
 
                         ar[j, i] = 0
+    return ar
+
+
+# This function will smooth the resulting noise from the noise_array. This essentially yields a map with some
+# basic landmasses. This is based on the cave generating cellular automata seen in many games.
+def cellular_smooth(
+    ar: np.array, overPop: int, underPop: int, bornPop: int, steps: int, borderValue=1
+) -> np.array:
+
+    """Smooths out a noisey array to produce geographical features."""
+
+    ar = np.pad(
+        ar, 1, constant_values=borderValue
+    )  # Pads the array so we don't have to have special logic for edges.
+    height, width = ar.shape  # Gets the width and height of the padded array.
+
+    ar = numba_cell_smoother(
+        ar, overPop, underPop, bornPop, steps, width, height
+    )  # The Numba compatible parts are in this function.
 
     ar = np.where(ar, 0, 1)  # Switches 0,1 in the array.
 
@@ -87,7 +105,7 @@ def cellular_smooth(
 
 # This produces an array of values in the range [-1,1]. Editing the volativity and noiseProb yeilds an assortment of
 # possible height arrays.
-def unused_height_array(size: (int, int), volat: float, noiseProb: float):
+def height_array(size: (int, int), volat: float, noiseProb: float):
     """Returns a height profile given a 2-tuple and volatility."""
 
     if len(size) != 2:
@@ -256,7 +274,7 @@ class Millow:
 
         """Adds height levels to the raw_map property."""
 
-        temp_array_1 = unused_height_array(
+        temp_array_1 = height_array(
             (int(self.size[0] / 3), int(self.size[1] / 3)), volat=5, noiseProb=0.09
         )  # Size is divided by 50 since it will be zoomed by this
         # amount to create smooth features. This uses percolation at the critical probability for features of all sizes.
@@ -412,23 +430,3 @@ class Millow:
     def display(self):
         """Displays the map."""
         self.img.show()
-
-
-if __name__ == "__main__":
-
-    import cProfile, pstats, io
-    from pstats import SortKey
-    pr = cProfile.Profile()
-    pr.enable()
-
-    map = Millow("dense islands", map_size=(1500, 1500))
-    map.generate_basic()
-    map.add_height(mountain_roughness=10)
-    map.display()
-
-    pr.disable()
-    s = io.StringIO()
-    sortby = SortKey.CUMULATIVE
-    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    ps.print_stats()
-    print(s.getvalue())

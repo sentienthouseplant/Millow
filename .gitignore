@@ -5,6 +5,7 @@
 ### Python ###
 #Files for generating the README.
 readmeimages.py
+experimenting.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
