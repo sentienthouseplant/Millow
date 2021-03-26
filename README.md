@@ -43,11 +43,6 @@ map.generate_basic()
 map.add_grid(grid_size=(10,10))
 map.display()
 
-map = Millow.Millow('dense islands',map_size=(1080,1920))
-map.generate_basic()
-map.add_height(mountain_roughness=0)
-map.display()
-
 map = Millow.Millow('dense islands',map_size=(1000,1000))
 map.generate_basic()
 map.add_height(mountain_roughness=0)
@@ -63,11 +58,12 @@ map.display()
 
 ### Dense Islands.
 ![Dense Islands](https://github.com/Jackbytes/Millow-Map/blob/main/img/denseislands.png "Dense Islands")
-=======
-![Dense Islands](https://github.com/Jackbytes/Millow-Map/blob/main/img/sparseislands.png "Sparse Islands")
 
 # To Do.
 
 - [ ] Add water shading.
-- [ ] Current gradient is unsightly, to be changed to more a discrete gradient.
+- [x] Current gradient is unsightly, to be changed to more a discrete gradient.
 - [ ] Remove gray/black dot bug.
+- [ ] Make map homeomorphic (ish) to a sphere.
+- [ ] Lakes
+- [ ] Biomes
