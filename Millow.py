@@ -270,9 +270,7 @@ class Millow:
 
             self.img = self.img.filter(ImageFilter.GaussianBlur(radius=0.5))
 
-    def add_height(self, discrete=True, mountain_roughness=5):
-
-        """Adds height levels to the raw_map property."""
+    def generate_height_map(self, mountain_roughness=5):
 
         temp_array_1 = height_array(
             (int(self.size[0] / 3), int(self.size[1] / 3)), volat=5, noiseProb=0.09
@@ -320,24 +318,32 @@ class Millow:
             (alpha_array - np.amin(alpha_array)) / np.amax(alpha_array)
         ) * 255  # All values will be in the range (0,255).
 
-        alpha_array = alpha_array.astype(np.uint8)
+        self.height_map = alpha_array.astype(np.uint8)
 
         if DEBUG:
 
             Image.fromarray(alpha_array).show()
 
+    def add_height_colouring(self, discrete=True, mountain_roughness=5):
+
+        """Adds height levels to the raw_map property."""
+
+        self.generate_height_map(mountain_roughness)
+
         if not discrete:
 
             # Continuious colouring.
 
-            red_array = np.interp(alpha_array, [0, 210, 245, 255], [159, 252, 128, 255])
+            red_array = np.interp(
+                self.height_map, [0, 210, 245, 255], [159, 252, 128, 255]
+            )
             #
             green_array = np.interp(
-                alpha_array, [0, 210, 245, 255], [193, 234, 128, 255]
+                self.height_map, [0, 210, 245, 255], [193, 234, 128, 255]
             )
             #
             blue_array = np.interp(
-                alpha_array, [0, 210, 245, 255], [100, 116, 128, 255]
+                self.height_map, [0, 210, 245, 255], [100, 116, 128, 255]
             )
 
         if discrete:
@@ -345,13 +351,16 @@ class Millow:
             # Discrete colouring.
 
             red_array = discrete_array(
-                alpha_array, [(0, 159), (120, 200), (180, 252), (225, 128), (250, 255)]
+                self.height_map,
+                [(0, 159), (120, 200), (180, 252), (225, 128), (250, 255)],
             )
             green_array = discrete_array(
-                alpha_array, [(0, 193), (120, 210), (180, 234), (225, 128), (250, 255)]
+                self.height_map,
+                [(0, 193), (120, 210), (180, 234), (225, 128), (250, 255)],
             )
             blue_array = discrete_array(
-                alpha_array, [(0, 100), (120, 105), (180, 116), (225, 128), (250, 225)]
+                self.height_map,
+                [(0, 100), (120, 105), (180, 116), (225, 128), (250, 225)],
             )
 
         raw_height = np.full(
@@ -360,21 +369,23 @@ class Millow:
 
         raw_height[
             :, :, 3
-        ] = alpha_array  # Sets the opaticy of the raw_height array to the one we generated.
+        ] = (
+            self.height_map
+        )  # Sets the opaticy of the raw_height array to the one we generated.
         raw_height[:, :, 0] = red_array
         raw_height[:, :, 1] = green_array
         raw_height[:, :, 2] = blue_array
 
-        self.raw_height = raw_height
-
         # Generates the heights image
-        height_image = Image.fromarray(self.raw_height)
+        height_image = Image.fromarray(raw_height)
+
         if DEBUG == True:
 
             height_image.show()
 
         # Composites the heights over the raw images.
         self.img = Image.alpha_composite(self.img, height_image)
+
 
     def add_grid(
         self,

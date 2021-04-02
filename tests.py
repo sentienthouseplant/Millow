@@ -31,7 +31,7 @@ class outputTests(unittest.TestCase):
         for test_size in [(1234, 4564), (1000, 1000), (45, 900)]:
             map = Millow.Millow("sparse islands", map_size=test_size)
             map.generate_basic()
-            map.add_height()
+            map.add_height_colouring()
             self.assertEqual(
                 map.img.size,
                 test_size[::-1],
@@ -54,7 +54,7 @@ class outputTests(unittest.TestCase):
             map = Millow.Millow("sparse islands", map_size=test_size)
             map.generate_basic()
             map.add_grid(grid_size=(10, 10))
-            map.add_height()
+            map.add_height_colouring()
             self.assertEqual(
                 map.img.size,
                 test_size[::-1],
